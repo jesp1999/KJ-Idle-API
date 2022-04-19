@@ -1,33 +1,30 @@
 const bcrypt = require("bcrypt")
+const { MongoClient, ServerApiVersion } = require('mongodb');
+var express = require('express');
+var router = express.Router();
 
-require("dotenv").config()
-const DB_HOST = process.env.DB_HOST
-const DB_USER = process.env.DB_USER
-const DB_PASSWORD = process.env.DB_PASSWORD
-const DB_DATABASE = process.env.DB_DATABASE
-const DB_PORT = process.env.DB_PORT
-const db = mongo.createPool({ //might not even be valid syntax TODO
+require("dotenv").config();
+
+const DB_HOST = process.env.DB_HOST;
+const DB_USER = process.env.DB_USER;
+const DB_PASSWORD = process.env.DB_PASSWORD;
+const DB_DATABASE = process.env.DB_DATABASE;
+const DB_PORT = process.env.DB_PORT;
+
+const db = { //TODO make this a mongo connection pool
    connectionLimit: 100,
    host: DB_HOST,
    user: DB_USER,
    password: DB_PASSWORD,
    database: DB_DATABASE,
    port: DB_PORT
-})
+};
 //remember to include .env in .gitignore file
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
-const uri = "mongodb+srv://" + db.user + ":" + db.password + "@" + db.host;
-
-app.use(express.json())
-//middleware to read req.body.<params>
-
-app.get("/hello", async (req,res) => {
-    res.sendStatus(200);
-    res.send("Hello world!");
-})
+const uri = 'mongodb+srv://' + encodeURIComponent(db.user) + ':' + encodeURIComponent(db.password) + '@' + db.host;
+console.log(uri);
 //CREATE USER
-app.post("/createUser", async (req,res) => {
+router.post('/createUser', async (req,res,next) => {
     const user = req.body.name;
     const hashedPassword = await bcrypt.hash(req.body.password,10);
 
@@ -36,8 +33,8 @@ app.post("/createUser", async (req,res) => {
         if (err) throw (err);
         const collection = client.db(db.database).collection("userDB"); //todo make tablename an env variable?
         // perform actions on the collection object
-        var cursor = collection.find({Username: user});
-        if (cursor.length == 0) {
+        cursor = collection.find({Username: user});
+        if (!cursor.hasNext()) {
             collection.insertOne({
                 Username: user,
                 HashedPassword: hashedPassword
@@ -53,8 +50,4 @@ app.post("/createUser", async (req,res) => {
     }); //end of client.connect()
 }) //end of app.post()
 
-app.listen(3000, () => {
-    console.log("Listening at http://localhost:3000");
-})
-
-//TODO make the backend a completely different project (probably best solution)
+module.exports = router;
