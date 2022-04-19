@@ -22,7 +22,7 @@ const db = { //TODO make this a mongo connection pool
 //remember to include .env in .gitignore file
 
 const uri = 'mongodb+srv://' + encodeURIComponent(db.user) + ':' + encodeURIComponent(db.password) + '@' + db.host;
-console.log(uri);
+
 //CREATE USER
 router.post('/createUser', async (req,res,next) => {
     const user = req.body.name;
