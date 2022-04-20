@@ -1,5 +1,5 @@
 const bcrypt = require("bcrypt")
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, MongoCursorInUseError } = require('mongodb');
 var express = require('express');
 var router = express.Router();
 
@@ -26,27 +26,29 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 
 //CREATE USER
 router.post('/createUser', async (req,res,next) => {
-    const user = req.body.name;
+    const username = req.body.username;
     const hashedPassword = await bcrypt.hash(req.body.password,10);
 
     client.connect(async err => {
         if (err) throw (err);
-        const collection = client.db(db.database).collection("userDB"); //todo make tablename an env variable?
+        const collection = client.db(db.database).collection('userDB'); //todo make tablename an env variable?
         // perform actions on the collection object
-        const cursor = collection.find({ Username: user });
-        if (!(await cursor.hasNext())) {
-            collection.insertOne({
-                Username: user,
-                HashedPassword: hashedPassword
-            });
-        console.log ("--------> Created new User"); //TODO log user IDs
-        res.sendStatus(201);
-        } else {
-            //TODO throw an error, user already exists!
-            console.log("------> User already exists");
-            res.sendStatus(409) ;
-        }
-        //client.close();
+        console.log(username)
+        collection.find({Username: username}).hasNext().then(userAlreadyExists => {
+            console.log(userAlreadyExists);
+            if (userAlreadyExists > 0) {
+                //TODO throw an error, user already exists!
+                console.log('------> User already exists');
+                res.sendStatus(409) ;
+            } else {
+                collection.insertOne({
+                    Username: username,
+                    HashedPassword: hashedPassword
+                });
+                console.log ('--------> Created new User'); //TODO log user IDs
+                res.sendStatus(201);
+            }
+        });
     }); //end of client.connect()
 }) //end of app.post()
 
