@@ -22,19 +22,19 @@ const db = { //TODO make this a mongo connection pool
 //remember to include .env in .gitignore file
 
 const uri = 'mongodb+srv://' + encodeURIComponent(db.user) + ':' + encodeURIComponent(db.password) + '@' + db.host;
+const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
 //CREATE USER
 router.post('/createUser', async (req,res,next) => {
     const user = req.body.name;
     const hashedPassword = await bcrypt.hash(req.body.password,10);
 
-    const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
-    client.connect(err => {
+    client.connect(async err => {
         if (err) throw (err);
         const collection = client.db(db.database).collection("userDB"); //todo make tablename an env variable?
         // perform actions on the collection object
-        cursor = collection.find({Username: user});
-        if (!cursor.hasNext()) {
+        const cursor = collection.find({ Username: user });
+        if (!(await cursor.hasNext())) {
             collection.insertOne({
                 Username: user,
                 HashedPassword: hashedPassword
@@ -46,7 +46,7 @@ router.post('/createUser', async (req,res,next) => {
             console.log("------> User already exists");
             res.sendStatus(409) ;
         }
-        client.close();
+        //client.close();
     }); //end of client.connect()
 }) //end of app.post()
 
