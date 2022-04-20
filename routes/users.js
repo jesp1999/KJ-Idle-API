@@ -60,6 +60,7 @@ router.post('/login', async (req,res,next) => {
     if (err) throw (err);
     const collection = client.db(db.database).collection('userDB'); //todo make tablename an env variable?
 
+    //TODO fix or suppress this "unnecessary await" warning (it is necessary!)
     const salt = (await (collection.findOne({ Username: username }, "Salt"))).Salt;
     const hashedPassword = await bcrypt.hash(req.body.password, salt);
 
