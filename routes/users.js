@@ -27,7 +27,8 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 //CREATE USER
 router.post('/createUser', async (req,res,next) => {
     const username = req.body.username;
-    const hashedPassword = await bcrypt.hash(req.body.password,10);
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(req.body.password, salt);
 
     client.connect(async err => {
         if (err) throw (err);
@@ -35,14 +36,15 @@ router.post('/createUser', async (req,res,next) => {
 
         // if entry matching username exists in userDB, don't add new one
         collection.find({Username: username}).hasNext().then(userAlreadyExists => {
-            if (userAlreadyExists > 0) {
+            if (userAlreadyExists) {
                 //TODO throw an error, user already exists!
                 console.log('------> User already exists');
                 res.sendStatus(409) ;
             } else {
                 collection.insertOne({
                     Username: username,
-                    HashedPassword: hashedPassword
+                    HashedPassword: hashedPassword,
+                    Salt: salt
                 });
                 console.log ('--------> Created new User'); //TODO log user IDs
                 res.sendStatus(201);
@@ -50,5 +52,27 @@ router.post('/createUser', async (req,res,next) => {
         });
     }); //end of client.connect()
 }) //end of app.post()
+
+router.post('/login', async (req,res,next) => {
+  const username = req.body.username;
+
+  client.connect(async err => {
+    if (err) throw (err);
+    const collection = client.db(db.database).collection('userDB'); //todo make tablename an env variable?
+
+    const salt = (await (collection.findOne({ Username: username }, "Salt"))).Salt;
+    const hashedPassword = await bcrypt.hash(req.body.password, salt);
+
+    collection.find({Username: username, HashedPassword: hashedPassword}).hasNext().then(loginSuccess => {
+      if (loginSuccess) {
+        console.log("--------> Login successful");
+        res.sendStatus(200);
+      } else {
+        console.log("--------> Login failed");
+        res.sendStatus(401);
+      }
+    });
+  });
+});
 
 module.exports = router;
